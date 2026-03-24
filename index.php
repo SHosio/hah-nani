@@ -110,7 +110,7 @@ if ($action) {
         if (!$sentence) { echo json_encode(['error' => 'Missing sentence']); exit; }
 
         $payload = json_encode([
-            'model' => 'google/gemini-2.0-flash-001',
+            'model' => 'google/gemini-2.5-flash',
             'messages' => [
                 ['role' => 'system', 'content' => 'You are a Japanese grammar tutor. Explain the grammar point or sentence briefly and clearly. Break down the conjugation steps. Keep it concise (3-5 sentences). Use romaji alongside Japanese where helpful.'],
                 ['role' => 'user', 'content' => "Explain this Japanese grammar/sentence:\n$sentence"]
