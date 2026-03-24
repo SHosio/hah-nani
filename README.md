@@ -1,6 +1,6 @@
-# Japanese Flashcards
+# Häh?何? (hah-nani)
 
-A single-page PHP flashcard app for studying Japanese grammar and vocabulary.
+Confused in Finnish AND Japanese. A single-page PHP flashcard app for studying Japanese grammar and vocabulary.
 
 ## Features
 

@@ -153,7 +153,7 @@ if ($action) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GENKI II · Grammar Flashcards</title>
+<title>Häh?何? · Japanese Flashcards</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -234,7 +234,7 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 #legend .item{font-family:'Space Mono',monospace;font-size:11px;color:#777;display:flex;align-items:center;gap:5px;}
 
 /* Footer */
-#footer{margin-top:32px;font-family:'Space Mono',monospace;font-size:11px;color:#333;letter-spacing:2px;}
+#footer{margin-top:32px;font-family:'Space Mono',monospace;font-size:11px;color:#555;letter-spacing:2px;}
 
 /* No cards */
 #no-cards{color:#aaa;font-family:'Space Mono',monospace;font-size:13px;margin-top:40px;display:none;}
@@ -244,8 +244,8 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 
 <!-- Header -->
 <div style="text-align:center;margin-bottom:20px;">
-  <div class="mono" style="color:#888;font-size:11px;letter-spacing:4px;margin-bottom:6px;">GENKI II · 第22課</div>
-  <h1 style="color:#fff;font-size:22px;font-weight:700;letter-spacing:2px;margin-bottom:4px;">文法フラッシュカード</h1>
+  <div class="mono" style="color:#888;font-size:11px;letter-spacing:4px;margin-bottom:6px;">HÄH?何?</div>
+  <h1 style="color:#fff;font-size:22px;font-weight:700;letter-spacing:2px;margin-bottom:4px;">日本語フラッシュカード</h1>
   <div class="mono" id="card-total" style="color:#888;font-size:11px;letter-spacing:3px;">GRAMMAR FLASHCARDS</div>
 </div>
 
@@ -287,7 +287,12 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 <!-- Buttons (flipped) -->
 <div id="btn-row" style="display:none;">
   <button class="btn" onclick="mark(false)" style="background:#2a0d14;color:#f87191;border:1px solid #e9456066;font-size:14px;padding:11px 26px;font-weight:700;">✗ Again</button>
+  <button class="btn" id="mastered-btn" style="background:#1c1c32;color:#aaa;border:1px solid #2e2e50;font-size:14px;padding:11px 16px;font-weight:700;">☆</button>
   <button class="btn" onclick="mark(true)" style="background:#0d2a18;color:#4ade80;border:1px solid #34d39966;font-size:14px;padding:11px 26px;font-weight:700;">✓ Got it</button>
+</div>
+<!-- Explain button (flipped, only with API key) -->
+<div id="explain-row" style="display:none;margin-bottom:14px;justify-content:center;">
+  <button class="btn" id="explain-btn-main" style="background:none;border:1px solid #2a2a45;color:#aaa;font-size:12px;padding:8px 20px;" onclick="explainCurrent()">💡 Explain this sentence</button>
 </div>
 
 <!-- Buttons (not flipped) -->
@@ -307,7 +312,7 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 <div id="no-cards">No cards match this filter.</div>
 
 <!-- Footer -->
-<div id="footer">GENKI II · EDGE ACADEMIA · 日本語文法</div>
+<div id="footer">HÄH?何? · 日本語フラッシュカード</div>
 
 <script>
 const ALL_DECKS = <?= json_encode($decks) ?>;
@@ -464,6 +469,11 @@ async function explainSentence(card) {
     }
 }
 
+function explainCurrent() {
+    const card = state.deck[state.index];
+    if (card) explainSentence(card);
+}
+
 function closeExplain() {
     document.getElementById('explain-panel').classList.remove('visible');
 }
@@ -617,18 +627,25 @@ function render() {
     backHtml += '<div class="ex-en">' + escHtml(card.example_en) + '</div>';
     backHtml += '</div>';
 
-    if (HAS_API_KEY) {
-        backHtml += '<button class="explain-btn" onclick="explainSentence(state.deck[state.index])">💡 Explain</button>';
-    }
-
     back.innerHTML = backHtml;
 
     // Buttons
     if (state.flipped) {
         document.getElementById('btn-row').style.display = 'flex';
         document.getElementById('btn-row-nav').style.display = 'none';
+
+        // Update mastered button in button row
+        const mBtn = document.getElementById('mastered-btn');
+        const im = state.masteredHashes.has(card.hash);
+        mBtn.textContent = im ? '★' : '☆';
+        mBtn.style.color = im ? '#f5a623' : '#aaa';
+        mBtn.onclick = () => toggleMastered(card.hash);
+
+        // Explain row
+        document.getElementById('explain-row').style.display = HAS_API_KEY ? 'flex' : 'none';
     } else {
         document.getElementById('btn-row').style.display = 'none';
+        document.getElementById('explain-row').style.display = 'none';
         document.getElementById('btn-row-nav').style.display = 'flex';
 
         const prevBtn = document.getElementById('prev-btn');
