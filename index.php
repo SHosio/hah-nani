@@ -62,6 +62,7 @@ $masteredHashes = getMasteredHashes($db);
 // ─── API Routes ───
 $action = $_GET['action'] ?? null;
 if ($action) {
+    error_reporting(0);
     header('Content-Type: application/json');
 
     if ($action === 'cards') {
@@ -130,7 +131,7 @@ if ($action) {
         ]);
         $response = curl_exec($ch);
         $err = curl_error($ch);
-        curl_close($ch);
+        unset($ch);
 
         if ($err) {
             echo json_encode(['error' => "cURL error: $err"]);
