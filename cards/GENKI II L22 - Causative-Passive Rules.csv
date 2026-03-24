@@ -1,0 +1,6 @@
+front,front_sub,front_romaji,back,back_romaji,example_jp,example_romaji,example_en
+Causative-Passive: meaning,使役受身形・意味,,"""was made to do"" — unwilling suffering",,野菜を食べさせられた。,Yasai wo tabesaserareta.,I was made to eat vegetables.
+Causative-Passive: る-verb rule,使役受身形・る動詞,,る → させられる,ru → saserareru,食べる → 食べさせられる,taberu → tabesaserareru,eat → be made to eat
+Causative-Passive: う-verb rule,使役受身形・う動詞,,a-sound + せられる OR short form: a + される,a + serareru OR a + sareru,飲む→飲まされる　書く→書かされる,nomu→nomasareru  kaku→kakasareru,Short form common in casual speech
+Causative-Passive: irregulars,使役受身形・不規則動詞,,する→させられる　くる→こさせられる,suru→saserareru  kuru→kosaserareru,残業をさせられた。,Zangyou wo saserareta.,I was made to do overtime.
+Causative-Passive: who does it?,使役受身形・構造,,[person] は [authority] に [verb]させられる,,私は上司に残業させられた。,Watashi wa joushi ni zangyou saserareta.,I was made to do overtime by my boss.

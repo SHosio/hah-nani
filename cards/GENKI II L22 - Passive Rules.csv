@@ -1,0 +1,5 @@
+front,front_sub,front_romaji,back,back_romaji,example_jp,example_romaji,example_en
+Passive: る-verb rule,受身形・る動詞,,る → られる,ru → rareru,食べる → 食べられる,taberu → taberareru,to eat → to be eaten
+Passive: う-verb rule,受身形・う動詞,,u-sound → a-sound + れる,u → a + reru,書く→書かれる　飲む→飲まれる,kaku→kakareru  nomu→nomareru,write→be written  drink→be drunk
+Passive: irregulars,受身形・不規則動詞,,する→される　くる→こられる,suru→sareru  kuru→korareru,宿題がされた。,Shukudai ga sareta.,The homework was done.
+Passive: nuance,受身形・ニュアンス,,Often implies inconvenience or suffering,,雨に降られた。,Ame ni furareta.,I got rained on. (inconvenience)

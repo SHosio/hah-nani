@@ -1,0 +1,5 @@
+front,front_sub,front_romaji,back,back_romaji,example_jp,example_romaji,example_en
+Potential: る-verb rule,可能形・る動詞,,る → られる,ru → rareru,見る→見られる　起きる→起きられる,miru→mirareru  okiru→okirareru,see→can see  wake→can wake up
+Potential: う-verb rule,可能形・う動詞,,u-sound → e-sound + る,u → e + ru,書く→書ける　飲む→飲める,kaku→kakeru  nomu→nomeru,write→can write  drink→can drink
+Potential: irregulars,可能形・不規則動詞,,する→できる　くる→こられる,suru→dekiru  kuru→korareru,日本語ができる。,Nihongo ga dekiru.,I can do/speak Japanese.
+⚠️ Passive vs Potential trap,受身形 vs 可能形,,る-verbs look IDENTICAL — context decides!,,食べられる = can eat OR is eaten,taberareru,う-verbs differ: 飲める≠飲まれる

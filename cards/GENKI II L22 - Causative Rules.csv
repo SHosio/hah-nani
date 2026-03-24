@@ -1,0 +1,5 @@
+front,front_sub,front_romaji,back,back_romaji,example_jp,example_romaji,example_en
+Causative: る-verb rule,使役形・る動詞,,る → させる,ru → saseru,食べる→食べさせる　見る→見させる,taberu→tabesaseru  miru→misaseru,eat→make eat  see→make see
+Causative: う-verb rule,使役形・う動詞,,u-sound → a-sound + せる,u → a + seru,書く→書かせる　飲む→飲ませる,kaku→kakaseru  nomu→nomaseru,write→make write  drink→make drink
+Causative: irregulars,使役形・不規則動詞,,する→させる　くる→こさせる,suru→saseru  kuru→kosaseru,掃除をさせた。,Souji wo saseta.,I made them clean.
+Causative: make vs let,強制 vs 許可,,Same form! Context decides forced or permitted.,,野菜を食べさせた (forced) vs 好きな物を食べさせた (permitted),,Both use 食べさせる
