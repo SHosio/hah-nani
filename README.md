@@ -72,3 +72,9 @@ Uses `google/gemini-2.5-flash` by default for fast, inexpensive explanations.
 - Volitional (意向形)
 
 Each form has a verb deck and a rules deck.
+
+## A Note on the CSV Files
+
+The included card decks were lovingly vibe-coded by a human who is actually out here trying to learn Japanese instead of moderating r/LearnJapanese from a bean bag chair. Are they perfect? Probably not. Will someone with 4,000 hours of anime consumption and strong opinions about pitch accent find something to complain about? Certainly.
+
+To those people: this is an open-source flashcard app with a CSV-based deck system. You know what that means. Fork it, fix it, make your own pristine decks, and bless the world with your knowledge. The `cards/` directory is right there. PRs with better data are welcome. Unsolicited Reddit essays about my romaji are not.
