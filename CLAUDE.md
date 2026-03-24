@@ -4,24 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A self-contained React component (`japanese_flashcards.jsx`) for studying Japanese verb conjugations from GENKI II Lesson 22 (第22課). No build system, no package.json, no external dependencies beyond React.
+A single-page PHP flashcard app for studying Japanese grammar and vocabulary. CSV-based decks, SQLite for mastered card persistence, optional OpenRouter LLM integration for sentence explanations.
+
+## Running
+
+```bash
+php -S localhost:8000
+```
+
+Open `http://localhost:8000`. Requires PHP 8.0+ with SQLite and cURL.
 
 ## Architecture
 
-Single-file React component (~364 lines) with everything inline:
+Single `index.php` (~670 lines) serves both API endpoints and the HTML/CSS/JS frontend:
 
-- **Data**: Two hardcoded arrays — `ruleCards` (30 grammar rule cards) and `verbCards` (92 verb transformation cards) covering 5 forms: Passive (受身形), Potential (可能形), Causative (使役形), Causative-Passive (使役受身形), Volitional (意向形)
-- **State**: React `useState` hooks manage filtering, card deck, navigation, flip animation, and scoring
-- **Styling**: Inline styles with a dark theme (#080810), form-based color accents, and 3D flip animation
-- **Fonts**: Google Fonts CDN — Noto Serif JP (Japanese text), Space Mono (UI elements)
+- **PHP backend** (top of file): `.env` loading, SQLite init, `loadDecks()` from CSV, three API routes (`?action=cards|master|explain`)
+- **HTML/CSS** (middle): Dark theme (#080810), 3D flip animation, Google Fonts (Noto Serif JP, Space Mono)
+- **JavaScript** (bottom): Vanilla JS with a single `state` object and `render()` function that updates all DOM elements
 
-## Usage
+### Data Flow
 
-Drop the component into any React project. No build step, environment variables, or configuration needed. All study data is ephemeral (no persistence across reloads).
+- Cards stored in `cards/*.csv` (filename = deck name)
+- CSV format: `front,front_sub,front_romaji,back,back_romaji,example_jp,example_romaji,example_en`
+- Cards with non-empty `front_sub` render as rule cards; others render as verb cards
+- Mastered cards tracked in `db/flashcards.db` SQLite via MD5 hash of `front+back`
+- OpenRouter API key from `.env` file; explain button hidden when no key configured
 
-## Key Patterns
+### Key State
 
-- Fisher-Yates shuffle for card randomization
-- `getFiltered()` dynamically filters cards by form and type before shuffling
-- Each card has: Japanese text, romaji, answer/back, example sentence with translation
-- Form colors defined in `formAccents` object
+```javascript
+state = { selectedDecks, showMastered, deck, index, flipped, score, done, masteredHashes }
+```
+
+Deck colors cycle through: #e94560, #4fc3f7, #f5a623, #a78bfa, #34d399
