@@ -221,7 +221,11 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 #explain-panel.visible{display:block;}
 #explain-panel .close-btn{position:absolute;top:10px;right:14px;background:none;border:none;color:#666;font-size:16px;cursor:pointer;font-family:'Space Mono',monospace;}
 #explain-panel .close-btn:hover{color:#aaa;}
-#explain-panel .content{color:#ccc;font-size:13px;line-height:1.7;white-space:pre-wrap;font-family:'Space Mono',monospace;}
+#explain-panel .content{color:#ccc;font-size:13px;line-height:1.7;font-family:'Space Mono',monospace;}
+#explain-panel .content p{margin:0;}
+#explain-panel .content strong{color:#fff;}
+#explain-panel .content em{color:#aaa;}
+#explain-panel .content li{margin-bottom:4px;}
 
 /* Buttons row */
 #btn-row{display:flex;gap:12px;margin-bottom:14px;}
@@ -464,7 +468,7 @@ async function explainSentence(card) {
         });
         const data = await res.json();
         if (data.error) content.textContent = 'Error: ' + data.error;
-        else content.textContent = data.explanation;
+        else content.innerHTML = renderMarkdown(data.explanation);
     } catch (e) {
         content.textContent = 'Error: ' + e.message;
     }
@@ -679,6 +683,29 @@ function escHtml(str) {
     const d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML;
+}
+
+function renderMarkdown(str) {
+    if (!str) return '';
+    let h = escHtml(str);
+    // Headers (###, ##, #)
+    h = h.replace(/^### (.+)$/gm, '<strong style="font-size:14px;">$1</strong>');
+    h = h.replace(/^## (.+)$/gm, '<strong style="font-size:15px;">$1</strong>');
+    h = h.replace(/^# (.+)$/gm, '<strong style="font-size:16px;">$1</strong>');
+    // Bold
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Inline code
+    h = h.replace(/`(.+?)`/g, '<code style="background:#1c1c32;padding:1px 5px;border-radius:4px;font-size:12px;">$1</code>');
+    // Unordered lists
+    h = h.replace(/^[\-\*] (.+)$/gm, '<li style="margin-left:16px;list-style:disc;">$1</li>');
+    // Ordered lists
+    h = h.replace(/^\d+\. (.+)$/gm, '<li style="margin-left:16px;list-style:decimal;">$1</li>');
+    // Double newlines → paragraphs, single → br
+    h = h.replace(/\n\n/g, '</p><p style="margin-top:8px;">');
+    h = h.replace(/\n/g, '<br>');
+    return '<p>' + h + '</p>';
 }
 
 // ─── Init ───
