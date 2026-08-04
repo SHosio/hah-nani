@@ -1,0 +1,15 @@
+# Block all dotfiles (.env, .gitignore, .git/, etc.)
+RedirectMatch 404 /\..*$
+
+# Block the SQLite database directory
+RedirectMatch 404 ^/db(/.*)?$
+
+# Block direct access to .env explicitly (belt + suspenders)
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+# Block .db files anywhere
+<FilesMatch "\.db$">
+    Require all denied
+</FilesMatch>
