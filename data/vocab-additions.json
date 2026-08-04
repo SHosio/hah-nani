@@ -23,6 +23,21 @@
       "pos": "adverb/other"
     }
   ],
+  "16": [
+    {
+      "kanji": "迎えに行く",
+      "kana": "むかえにいく",
+      "romaji": "mukae ni iku",
+      "english": "to go to pick up (someone)",
+      "pos": "u-verb"
+    },
+    {
+      "kanji": "",
+      "kana": "これから",
+      "english": "from now on",
+      "pos": "adverb/other"
+    }
+  ],
   "17": [
     {
       "kanji": "生まれる",
