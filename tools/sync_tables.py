@@ -158,8 +158,20 @@ def main():
     )
     if not targets:
         raise SystemExit("no chapter files found")
+
+    skipped = []
     for path in targets:
-        sync(os.path.abspath(path))
+        try:
+            sync(os.path.abspath(path))
+        except SystemExit as err:
+            # One chapter missing its metadata should not stop the rest.
+            skipped.append(f"{os.path.relpath(path, ROOT)}: {err}")
+
+    for note in skipped:
+        print(f"SKIPPED {note}")
+    if skipped:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

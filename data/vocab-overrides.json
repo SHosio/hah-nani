@@ -1,6 +1,5 @@
 {
   "_comment": "Corrections applied on top of data/genki-vocab.json, keyed by \"<lesson>:<kana>\". Keeps the vendored dataset pristine while letting us fix typos and mis-grouped entries. Recognised fields: kanji, kana, romaji, english, pos. A romaji override is mainly for phrases, where the generator runs the words together and particles read better spaced.",
-
   "21:もんくをいう": {
     "romaji": "monku wo iu",
     "pos": "u-verb"
@@ -24,7 +23,6 @@
   "21:こと": {
     "english": "things; matters"
   },
-
   "22:おねがいする": {
     "english": "to ask (a favor); to request"
   },
@@ -55,7 +53,6 @@
   "22:もうすこし": {
     "romaji": "mou sukoshi"
   },
-
   "23:あめがやむ": {
     "romaji": "ame ga yamu"
   },
@@ -82,5 +79,112 @@
   },
   "23:そんな〜": {
     "romaji": "sonna 〜"
+  },
+  "13:やくそくをまもる": {
+    "romaji": "yakusoku wo mamoru"
+  },
+  "13:じつは": {
+    "romaji": "jitsu wa"
+  },
+  "13:よろしくおねがいします": {
+    "romaji": "yoroshiku onegaishimasu"
+  },
+  "14:でんしメール": {
+    "romaji": "denshi meeru"
+  },
+  "14:ビデオカメラ": {
+    "romaji": "bideo kamera"
+  },
+  "15:ほけんにはいる": {
+    "romaji": "hoken ni hairu"
+  },
+  "15:きをつける": {
+    "romaji": "ki wo tsukeru"
+  },
+  "15:する": {
+    "kanji": "〜にする",
+    "kana": "〜にする",
+    "romaji": "〜ni suru"
+  },
+  "17:かみをとかす": {
+    "romaji": "kami wo tokasu"
+  },
+  "17:おゆをわかす": {
+    "romaji": "oyu wo wakasu"
+  },
+  "17:たからくじにあたる": {
+    "romaji": "takarakuji ni ataru"
+  },
+  "17:ひげをそる": {
+    "romaji": "hige wo soru"
+  },
+  "17:かぎをかける": {
+    "romaji": "kagi wo kakeru"
+  },
+  "17:〜にくらべて": {
+    "romaji": "〜ni kurabete"
+  },
+  "17:〜によると": {
+    "romaji": "〜ni yoru to"
+  },
+  "17:おめでとうございます": {
+    "romaji": "omedetou gozaimasu"
+  },
+  "18:きぶんがわるい": {
+    "romaji": "kibun ga warui"
+  },
+  "18:おゆがわく": {
+    "romaji": "oyu ga waku"
+  },
+  "18:おさきにしつれいします": {
+    "romaji": "osaki ni shitsurei shimasu"
+  },
+  "18:おつかれさまでした": {
+    "romaji": "otsukaresama deshita"
+  },
+  "18:いますぐ": {
+    "romaji": "ima sugu"
+  },
+  "18:るすばんでんわ": {
+    "romaji": "rusuban denwa"
+  },
+  "19:なかがいい": {
+    "romaji": "naka ga ii"
+  },
+  "19:はなしをする": {
+    "romaji": "hanashi wo suru"
+  },
+  "19:ほんとうは": {
+    "romaji": "hontou wa"
+  },
+  "19:よろしくおつたえください": {
+    "romaji": "yoroshiku otsutae kudasai"
+  },
+  "19:おやすみになる": {
+    "romaji": "oyasumi ni naru"
+  },
+  "19:ごらんになる": {
+    "romaji": "goran ni naru"
+  },
+  "19:〜ていらっしゃる": {
+    "romaji": "〜te irassharu"
+  },
+  "20:かかりのもの": {
+    "romaji": "kakari no mono"
+  },
+  "20:〜ておる": {
+    "romaji": "〜te oru"
+  },
+  "20:〜でござる": {
+    "romaji": "〜de gozaru"
+  },
+  "20:しつれいしました": {
+    "romaji": "shitsurei shimashita"
+  },
+  "20:それでは": {
+    "romaji": "sore de wa"
+  },
+  "20:もうしわけありません": {
+    "romaji": "moushiwake arimasen"
   }
 }

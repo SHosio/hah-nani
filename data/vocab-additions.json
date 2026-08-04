@@ -1,0 +1,71 @@
+{
+  "_comment": "Words the textbook's own chapter word list contains but the vendored dataset omits, keyed by lesson. Each entry needs kanji, kana, english and pos; romaji is generated unless given. An addition is inserted after the last dataset word sharing its pos, so Genki's grouping order is preserved. Use data/vocab-overrides.json to correct a word that already exists; use this only to add a missing one.",
+  "13": [
+    {
+      "kanji": "〜回",
+      "kana": "〜かい",
+      "romaji": "〜kai",
+      "english": "... times",
+      "pos": "adverb/other"
+    },
+    {
+      "kanji": "",
+      "kana": "〜キロ",
+      "romaji": "〜kiro",
+      "english": "... kilometers; ... kilograms",
+      "pos": "adverb/other"
+    },
+    {
+      "kanji": "〜と申します",
+      "kana": "〜ともうします",
+      "romaji": "〜to moushimasu",
+      "english": "my name is ...",
+      "pos": "adverb/other"
+    }
+  ],
+  "17": [
+    {
+      "kanji": "生まれる",
+      "kana": "うまれる",
+      "english": "to be born",
+      "pos": "ru-verb"
+    },
+    {
+      "kanji": "お祈りする",
+      "kana": "おいのりする",
+      "romaji": "oinori suru",
+      "english": "to pray",
+      "pos": "irregular-verb"
+    },
+    {
+      "kanji": "",
+      "kana": "〜かな(あ)",
+      "romaji": "〜kana(a)",
+      "english": "I wonder ... (casual)",
+      "pos": "adverb/other"
+    }
+  ],
+  "18": [
+    {
+      "kanji": "片付ける",
+      "kana": "かたづける",
+      "english": "to tidy up (～を)",
+      "pos": "ru-verb"
+    },
+    {
+      "kanji": "",
+      "kana": "〜(ん)だろう",
+      "romaji": "〜(n)darou",
+      "english": "short form of 〜(ん)でしょう",
+      "pos": "adverb/other"
+    }
+  ],
+  "19": [
+    {
+      "kanji": "",
+      "kana": "それで",
+      "english": "then; therefore",
+      "pos": "adverb/other"
+    }
+  ]
+}

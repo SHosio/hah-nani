@@ -1,5 +1,64 @@
 {
   "_comment": "Genki lists chapter vocabulary in part-of-speech groups, and data/genki-vocab.json preserves that order (sorted by kana within each group). Each lesson entry is the ordered list of [pos, count] pairs. Individual words that sit in the wrong group are corrected in data/vocab-overrides.json.",
+  "13": [
+    ["noun", 26],
+    ["i-adjective", 5],
+    ["na-adjective", 3],
+    ["u-verb", 6],
+    ["irregular-verb", 1],
+    ["adverb/other", 14]
+  ],
+  "14": [
+    ["noun", 28],
+    ["i-adjective", 1],
+    ["na-adjective", 1],
+    ["u-verb", 2],
+    ["ru-verb", 4],
+    ["irregular-verb", 2],
+    ["adverb/other", 10]
+  ],
+  "15": [
+    ["noun", 23],
+    ["i-adjective", 1],
+    ["u-verb", 8],
+    ["ru-verb", 4],
+    ["irregular-verb", 3],
+    ["adverb/other", 2]
+  ],
+  "17": [
+    ["noun", 19],
+    ["i-adjective", 3],
+    ["u-verb", 7],
+    ["ru-verb", 4],
+    ["irregular-verb", 4],
+    ["adverb/other", 10]
+  ],
+  "18": [
+    ["noun", 18],
+    ["i-adjective", 3],
+    ["u-verb", 13],
+    ["ru-verb", 5],
+    ["irregular-verb", 1],
+    ["adverb/other", 8]
+  ],
+  "19": [
+    ["irregular-verb", 1],
+    ["noun", 17],
+    ["i-adjective", 1],
+    ["na-adjective", 1],
+    ["u-verb", 15],
+    ["ru-verb", 4],
+    ["irregular-verb", 4],
+    ["adverb/other", 8]
+  ],
+  "20": [
+    ["noun", 17],
+    ["i-adjective", 1],
+    ["u-verb", 13],
+    ["ru-verb", 4],
+    ["irregular-verb", 3],
+    ["adverb/other", 12]
+  ],
   "21": [
     ["noun", 20],
     ["i-adjective", 2],
@@ -10,14 +69,6 @@
     ["adverb/other", 4],
     ["noun", 1]
   ],
-  "23": [
-    ["noun", 18],
-    ["i-adjective", 1],
-    ["u-verb", 7],
-    ["ru-verb", 3],
-    ["irregular-verb", 8],
-    ["adverb/other", 6]
-  ],
   "22": [
     ["noun", 22],
     ["i-adjective", 1],
@@ -26,5 +77,13 @@
     ["ru-verb", 4],
     ["irregular-verb", 6],
     ["adverb/other", 8]
+  ],
+  "23": [
+    ["noun", 18],
+    ["i-adjective", 1],
+    ["u-verb", 7],
+    ["ru-verb", 3],
+    ["irregular-verb", 8],
+    ["adverb/other", 6]
   ]
 }

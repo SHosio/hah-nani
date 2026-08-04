@@ -66,7 +66,36 @@ def lesson_entries(lesson):
             row.update(overrides.get(f"{lesson}:{entry['Kana']}", {}))
             out.append(row)
         i += count
-    return out
+
+    return apply_additions(out, lesson)
+
+
+def apply_additions(rows, lesson):
+    """Splice in words the book lists but the dataset omits.
+
+    Each addition goes after the last existing row sharing its part of speech,
+    which keeps Genki's own grouping order intact. A part of speech with no
+    existing rows appends at the end.
+    """
+    additions = load("vocab-additions.json").get(str(lesson))
+    if not additions:
+        return rows
+
+    for entry in additions:
+        missing = [f for f in ("kanji", "kana", "english", "pos") if f not in entry]
+        if missing:
+            raise SystemExit(
+                f"lesson {lesson}: addition {entry!r} is missing {missing}"
+            )
+        row = dict(entry)
+        row.setdefault("romaji", to_romaji(row["kana"]))
+
+        last = max(
+            (i for i, r in enumerate(rows) if r["pos"] == row["pos"]), default=None
+        )
+        rows.insert(len(rows) if last is None else last + 1, row)
+
+    return rows
 
 
 def cell(value):
