@@ -1,0 +1,22 @@
+{
+  "_comment": "Genki lists chapter vocabulary in part-of-speech groups, and data/genki-vocab.json preserves that order (sorted by kana within each group). Each lesson entry is the ordered list of [pos, count] pairs. Individual words that sit in the wrong group are corrected in data/vocab-overrides.json.",
+  "21": [
+    ["noun", 20],
+    ["i-adjective", 2],
+    ["na-adjective", 3],
+    ["u-verb", 14],
+    ["ru-verb", 7],
+    ["irregular-verb", 5],
+    ["adverb/other", 4],
+    ["noun", 1]
+  ],
+  "22": [
+    ["noun", 22],
+    ["i-adjective", 1],
+    ["na-adjective", 5],
+    ["u-verb", 9],
+    ["ru-verb", 4],
+    ["irregular-verb", 6],
+    ["adverb/other", 8]
+  ]
+}

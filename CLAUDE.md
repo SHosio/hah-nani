@@ -4,7 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A single-page PHP flashcard app for studying Japanese grammar and vocabulary. CSV-based decks, SQLite for mastered card persistence, optional OpenRouter LLM integration for sentence explanations.
+Two parts that will eventually meet:
+
+1. **Chapter notes** (`chapters/`) are structured markdown, one file per Genki lesson. They are source data for generating study material, not prose to read. Genki 2nd edition.
+2. **Flashcard app** (`index.php`) is a single-page PHP app with CSV decks, SQLite for mastered card persistence, and optional OpenRouter LLM integration for sentence explanations.
+
+The decks in `cards/` are still hand-built and predate the chapter notes.
+
+## Chapter notes
+
+`chapters/SCHEMA.md` is the contract every chapter file follows. Read it before editing anything under `chapters/`.
+
+```bash
+python3 tools/fetch_data.py           # once per clone, downloads the word lists
+python3 tools/sync_tables.py          # build chapters/**/l<NN>.vocab.md
+python3 tools/validate_chapters.py    # enforce the schema, exits non-zero on drift
+python3 tools/test_validate_chapters.py   # prove the validator still catches breakage
+```
+
+Rules that are easy to get wrong:
+
+- **This repo is public and must not contain Genki's word lists.** Vocabulary and kanji tables live in git-ignored `l<NN>.vocab.md` companions; the chapter file carries only counts and a pointer. The validator rejects a table pasted into a chapter file.
+- The Vocabulary and Kanji tables are **generated**. Corrections go in `data/vocab-overrides.json`, `data/kanji-overrides.json` or `data/pos-groups.json`, then re-sync. Hand-edits are overwritten.
+- Glob chapters with `l[0-9][0-9].md`, since `l*.md` also matches the generated companions.
+- Grammar IDs (`g2-l21-passive`) are permanent once committed. Downstream artifacts reference them. Renaming a point's `name` is fine, renaming its `id` is not.
+- The source PDFs in Google Drive are image scans with no text layer, so nothing can be grepped or extracted from them without OCR.
+
+See `data/README.md` for dataset provenance and `docs/superpowers/specs/2026-08-04-genki-chapter-notes-design.md` for why the design is shaped this way.
 
 ## Running
 

@@ -1,0 +1,58 @@
+{
+  "_comment": "Corrections applied on top of data/genki-vocab.json, keyed by \"<lesson>:<kana>\". Keeps the vendored dataset pristine while letting us fix typos and mis-grouped entries. Recognised fields: kanji, kana, romaji, english, pos. A romaji override is mainly for phrases, where the generator runs the words together and particles read better spaced.",
+
+  "21:もんくをいう": {
+    "romaji": "monku wo iu",
+    "pos": "u-verb"
+  },
+  "21:きがつく": {
+    "romaji": "ki ga tsuku"
+  },
+  "21:ばかにする": {
+    "romaji": "baka ni suru"
+  },
+  "21:〜あいだに": {
+    "romaji": "〜aida ni"
+  },
+  "21:どろぼう": {
+    "english": "burglar; thief"
+  },
+  "21:ひるねをする": {
+    "romaji": "hirune wo suru",
+    "english": "to take a nap"
+  },
+  "21:こと": {
+    "english": "things; matters"
+  },
+
+  "22:おねがいする": {
+    "english": "to ask (a favor); to request"
+  },
+  "22:コピーをとる": {
+    "romaji": "kopii wo toru",
+    "pos": "u-verb"
+  },
+  "22:けいかくをたてる": {
+    "romaji": "keikaku wo tateru",
+    "pos": "ru-verb"
+  },
+  "22:そんなことはない": {
+    "romaji": "sonna koto wa nai",
+    "english": "that's not the case; I don't think so"
+  },
+  "22:ほうっておく": {
+    "romaji": "houtte oku"
+  },
+  "22:まにあう": {
+    "romaji": "ma ni au"
+  },
+  "22:むかえにいく": {
+    "romaji": "mukae ni iku"
+  },
+  "22:こんなふう": {
+    "romaji": "konna fuu"
+  },
+  "22:もうすこし": {
+    "romaji": "mou sukoshi"
+  }
+}

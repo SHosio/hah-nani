@@ -2,3 +2,12 @@
 db/
 *.db
 .DS_Store
+__pycache__/
+*.pyc
+
+# Genki's own word lists. This is a public repo, so the textbook's chapter
+# vocabulary and kanji selections stay local. Rebuild with:
+#   python3 tools/fetch_data.py && python3 tools/sync_tables.py
+data/genki-vocab.json
+data/genki-kanji.json
+chapters/**/*.vocab.md

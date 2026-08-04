@@ -1,0 +1,19 @@
+{
+  "_comment": "Corrections applied on top of data/genki-kanji.json, keyed by \"<lesson>:<kanji>\". Recognised fields: readings, meaning, examples (a list of \"word (reading) gloss\" strings).",
+
+  "21:重": {
+    "examples": [
+      "重い (おもい) heavy",
+      "重ねる (かさねる) to pile up",
+      "体重 (たいじゅう) body weight"
+    ]
+  },
+  "22:末": {
+    "readings": "マツ；すえ",
+    "examples": [
+      "週末 (しゅうまつ) weekend",
+      "期末試験 (きまつしけん) final examination",
+      "末 (すえ) the end"
+    ]
+  }
+}
