@@ -12,16 +12,21 @@ if (file_exists($envFile)) {
     }
 }
 $hasApiKey = !empty($env['OPENROUTER_API_KEY']);
+$apiKey = $env['OPENROUTER_API_KEY'] ?? '';
+
+// Cheap model for the one-shot explain button, stronger one for full lessons
+// and decks. Both overridable in .env without touching code.
+$explainModel = $env['EXPLAIN_MODEL'] ?? 'google/gemini-2.5-flash';
+$lessonModel = $env['LESSON_MODEL'] ?? 'anthropic/claude-sonnet-5';
+
+require __DIR__ . '/lib/store.php';
+require __DIR__ . '/lib/chapters.php';
+require __DIR__ . '/lib/openrouter.php';
+require __DIR__ . '/lib/templates.php';
 
 // ─── SQLite ───
 $dbDir = __DIR__ . '/db';
-if (!is_dir($dbDir)) mkdir($dbDir, 0755, true);
-$db = new SQLite3($dbDir . '/flashcards.db');
-$db->exec('CREATE TABLE IF NOT EXISTS mastered_cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    card_hash TEXT UNIQUE NOT NULL,
-    mastered_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)');
+$db = initDb($dbDir);
 
 // ─── Load Decks ───
 function loadDecks() {
@@ -49,15 +54,10 @@ function loadDecks() {
 $decks = loadDecks();
 
 // ─── Mastered hashes ───
-function getMasteredHashes($db) {
-    $hashes = [];
-    $result = $db->query('SELECT card_hash FROM mastered_cards');
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-        $hashes[] = $row['card_hash'];
-    }
-    return $hashes;
-}
 $masteredHashes = getMasteredHashes($db);
+
+// ─── Chapters ───
+$chapters = loadChapters();
 
 // ─── API Routes ───
 $action = $_GET['action'] ?? null;
@@ -82,22 +82,98 @@ if ($action) {
         $input = json_decode(file_get_contents('php://input'), true);
         $hash = $input['card_hash'] ?? '';
         if (!$hash) { echo json_encode(['error' => 'Missing card_hash']); exit; }
+        echo json_encode(['mastered' => toggleMastered($db, $hash)]);
+        exit;
+    }
 
-        $stmt = $db->prepare('SELECT id FROM mastered_cards WHERE card_hash = :hash');
-        $stmt->bindValue(':hash', $hash, SQLITE3_TEXT);
-        $exists = $stmt->execute()->fetchArray();
+    if ($action === 'chapters') {
+        echo json_encode($chapters);
+        exit;
+    }
 
-        if ($exists) {
-            $stmt = $db->prepare('DELETE FROM mastered_cards WHERE card_hash = :hash');
-            $stmt->bindValue(':hash', $hash, SQLITE3_TEXT);
-            $stmt->execute();
-            echo json_encode(['mastered' => false]);
-        } else {
-            $stmt = $db->prepare('INSERT INTO mastered_cards (card_hash) VALUES (:hash)');
-            $stmt->bindValue(':hash', $hash, SQLITE3_TEXT);
-            $stmt->execute();
-            echo json_encode(['mastered' => true]);
+    if ($action === 'generations') {
+        echo json_encode(listGenerations($db));
+        exit;
+    }
+
+    if ($action === 'generation') {
+        $gen = getGeneration($db, (int) ($_GET['id'] ?? 0));
+        echo json_encode($gen ?: ['error' => 'Not found']);
+        exit;
+    }
+
+    if ($action === 'delete_generation' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $ok = deleteGeneration($db, (int) ($input['id'] ?? 0));
+        echo json_encode($ok ? ['deleted' => true] : ['error' => 'Not found']);
+        exit;
+    }
+
+    if ($action === 'generate' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $kind = $input['kind'] ?? 'lesson';
+        $ids = $input['grammar_ids'] ?? [];
+        $request = trim($input['prompt'] ?? '');
+
+        if (!isset(GENERATION_KINDS[$kind])) {
+            echo json_encode(['error' => "Unknown kind: $kind"]); exit;
         }
+        if (!is_array($ids) || !$ids) {
+            echo json_encode(['error' => 'Select at least one grammar point.']); exit;
+        }
+
+        $points = collectGrammar($chapters, $ids);
+        if (!$points) {
+            echo json_encode(['error' => 'None of those grammar points exist.']); exit;
+        }
+
+        $result = openrouterChat(
+            $apiKey, $lessonModel, buildMessages($kind, $points, $request)
+        );
+        if (isset($result['error'])) { echo json_encode($result); exit; }
+
+        $content = $result['content'];
+        $deckFile = null;
+        $note = null;
+
+        if ($kind === 'flashcards') {
+            $parsed = parseGeneratedCards($content);
+            if (isset($parsed['error'])) {
+                echo json_encode(['error' => $parsed['error']]); exit;
+            }
+            $cardsDir = __DIR__ . '/cards';
+            $deckName = uniqueDeckName(deriveTitle($request, $points), $cardsDir);
+            try {
+                $deckFile = writeDeckCsv($cardsDir, $deckName, $parsed['rows']);
+            } catch (RuntimeException $e) {
+                echo json_encode(['error' => $e->getMessage()]); exit;
+            }
+            $count = count($parsed['rows']);
+            $note = "Deck \"$deckName\" written with $count cards.";
+            if (!empty($parsed['skipped'])) {
+                $note .= " {$parsed['skipped']} malformed row(s) were dropped.";
+            }
+        }
+
+        $id = saveGeneration($db, [
+            'kind' => $kind,
+            'title' => deriveTitle($request, $points),
+            'prompt' => $request,
+            'grammar_ids' => array_column($points, 'id'),
+            'model' => $lessonModel,
+            'content' => $content,
+            'deck_file' => $deckFile,
+        ]);
+
+        echo json_encode([
+            'id' => $id,
+            'kind' => $kind,
+            'title' => deriveTitle($request, $points),
+            'content' => $content,
+            'deck_file' => $deckFile,
+            'note' => $note,
+            'model' => $lessonModel,
+        ]);
         exit;
     }
 
@@ -110,36 +186,14 @@ if ($action) {
         $sentence = $input['sentence'] ?? '';
         if (!$sentence) { echo json_encode(['error' => 'Missing sentence']); exit; }
 
-        $payload = json_encode([
-            'model' => 'google/gemini-2.5-flash',
-            'messages' => [
-                ['role' => 'system', 'content' => 'You are a Japanese grammar tutor. Explain the grammar point or sentence briefly and clearly. Break down the conjugation steps. Keep it concise (3-5 sentences). Use romaji alongside Japanese where helpful.'],
-                ['role' => 'user', 'content' => "Explain this Japanese grammar/sentence:\n$sentence"]
-            ]
-        ]);
+        $result = openrouterChat($apiKey, $explainModel, [
+            ['role' => 'system', 'content' => 'You are a Japanese grammar tutor. Explain the grammar point or sentence briefly and clearly. Break down the conjugation steps. Keep it concise (3-5 sentences). Use romaji alongside Japanese where helpful.'],
+            ['role' => 'user', 'content' => "Explain this Japanese grammar/sentence:\n$sentence"],
+        ], 30);
 
-        $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $env['OPENROUTER_API_KEY'],
-            ],
-            CURLOPT_TIMEOUT => 30,
-        ]);
-        $response = curl_exec($ch);
-        $err = curl_error($ch);
-        unset($ch);
-
-        if ($err) {
-            echo json_encode(['error' => "cURL error: $err"]);
-            exit;
-        }
-        $data = json_decode($response, true);
-        $explanation = $data['choices'][0]['message']['content'] ?? 'No explanation returned.';
-        echo json_encode(['explanation' => $explanation]);
+        echo json_encode(isset($result['error'])
+            ? $result
+            : ['explanation' => $result['content']]);
         exit;
     }
 
@@ -243,6 +297,93 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 
 /* No cards */
 #no-cards{color:#aaa;font-family:'Space Mono',monospace;font-size:13px;margin-top:40px;display:none;}
+
+/* ─── View switcher ─── */
+#view-nav{display:flex;gap:8px;margin-bottom:22px;}
+#view-nav .pill{font-size:11px;padding:7px 20px;letter-spacing:2px;background:#12122a;color:#777;border:1px solid #23233f;}
+#view-nav .pill.active{background:#1c1c3a;color:#fff;border-color:#4a4a70;}
+
+/* ─── Study view ─── */
+#view-study{width:100%;max-width:760px;display:flex;flex-direction:column;align-items:stretch;}
+
+#chapter-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+#chapter-tabs .pill{font-size:11px;padding:7px 14px;background:#12122a;color:#888;border:1px solid #23233f;display:flex;gap:7px;align-items:center;}
+#chapter-tabs .pill.active{background:#1c1c3a;color:#fff;border-color:#4a4a70;}
+#chapter-tabs .tick{font-size:10px;color:#34d399;}
+
+#chapter-panel{background:#0c0c1e;border:1px solid #23233f;border-radius:16px;padding:20px 22px;margin-bottom:18px;}
+.chapter-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+.chapter-head .jp{font-size:19px;color:#fff;}
+.chapter-head .en{font-family:'Space Mono',monospace;font-size:12px;color:#888;}
+.chapter-meta{font-family:'Space Mono',monospace;font-size:10px;color:#555;letter-spacing:1px;margin-bottom:16px;}
+
+.point{display:flex;gap:11px;align-items:flex-start;padding:9px 10px;border-radius:9px;cursor:pointer;transition:background .15s;}
+.point:hover{background:#13132a;}
+.point.on{background:#16162f;}
+.point .box{width:15px;height:15px;border-radius:4px;border:1.5px solid #3a3a5e;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#080810;transition:all .15s;}
+.point.on .box{background:#4fc3f7;border-color:#4fc3f7;}
+.point .txt{flex:1;min-width:0;}
+.point .name{color:#e8e8f0;font-size:14px;margin-bottom:2px;}
+.point.on .name{color:#fff;}
+.point .sum{font-family:'Space Mono',monospace;font-size:11px;color:#6a6a85;line-height:1.5;}
+
+/* ─── Composer ─── */
+#composer{background:#0c0c1e;border:1px solid #23233f;border-radius:16px;padding:18px 20px;margin-bottom:18px;}
+#selection-tray{font-family:'Space Mono',monospace;font-size:11px;color:#6a6a85;line-height:1.6;margin-bottom:12px;}
+#selection-tray .sel{color:#4fc3f7;}
+#composer-prompt{width:100%;background:#080814;border:1px solid #23233f;border-radius:10px;color:#eee;font-family:'Space Mono',monospace;font-size:13px;padding:11px 13px;resize:vertical;line-height:1.6;}
+#composer-prompt:focus{outline:none;border-color:#4a4a70;}
+#composer-prompt::placeholder{color:#4a4a63;}
+#composer-row{display:flex;gap:10px;margin-top:11px;align-items:center;flex-wrap:wrap;}
+#composer-kind{background:#12122a;border:1px solid #23233f;color:#ccc;border-radius:10px;padding:9px 12px;font-size:12px;cursor:pointer;}
+#composer-kind:focus{outline:none;border-color:#4a4a70;}
+#generate-btn{background:#4fc3f7;color:#080810;font-weight:700;font-size:13px;padding:10px 26px;}
+#clear-btn{background:#1c1c32;color:#888;border:1px solid #2e2e50;font-size:12px;padding:10px 16px;}
+#composer-status{font-family:'Space Mono',monospace;font-size:11px;margin-top:11px;min-height:15px;color:#888;}
+#composer-status.err{color:#f87191;}
+
+/* ─── Output ─── */
+#output-panel{display:none;background:#0c0c1e;border:1px solid #23233f;border-radius:16px;padding:22px;margin-bottom:18px;position:relative;}
+#output-panel.visible{display:block;}
+#output-panel .close-btn{position:absolute;top:12px;right:16px;background:none;border:none;color:#666;font-size:16px;cursor:pointer;font-family:'Space Mono',monospace;}
+#output-panel .close-btn:hover{color:#aaa;}
+#output-title{font-size:11px;color:#4fc3f7;letter-spacing:2px;margin-bottom:6px;padding-right:26px;}
+#output-note{font-family:'Space Mono',monospace;font-size:11px;color:#34d399;margin-bottom:14px;}
+#output-content{color:#d5d5e0;font-size:14px;line-height:1.75;}
+#output-content h1,#output-content h2,#output-content h3{color:#fff;margin:22px 0 9px;line-height:1.35;}
+#output-content h1{font-size:19px;}
+#output-content h2{font-size:16px;}
+#output-content h3{font-size:14px;font-family:'Space Mono',monospace;letter-spacing:1px;}
+#output-content p{margin-bottom:11px;}
+#output-content ul,#output-content ol{margin:0 0 11px 20px;}
+#output-content li{margin-bottom:5px;}
+#output-content strong{color:#fff;}
+#output-content em{color:#aaa;}
+#output-content code{font-family:'Space Mono',monospace;background:#16162e;padding:2px 6px;border-radius:5px;font-size:12px;color:#9fdcf7;}
+#output-content hr{border:none;border-top:1px solid #23233f;margin:18px 0;}
+.table-scroll{overflow-x:auto;margin-bottom:13px;}
+#output-content table{border-collapse:collapse;font-size:12.5px;min-width:100%;}
+#output-content th,#output-content td{border:1px solid #23233f;padding:7px 11px;text-align:left;vertical-align:top;}
+#output-content th{background:#13132a;color:#fff;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;white-space:nowrap;}
+
+/* ─── Library ─── */
+#library-heading{font-size:11px;color:#555;letter-spacing:3px;margin-bottom:10px;}
+.lib-item{display:flex;align-items:center;gap:11px;background:#0c0c1e;border:1px solid #1d1d36;border-radius:11px;padding:11px 14px;margin-bottom:7px;}
+.lib-item .main{flex:1;min-width:0;cursor:pointer;}
+.lib-item .t{color:#ddd;font-size:13px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lib-item:hover .t{color:#fff;}
+.lib-item .m{font-family:'Space Mono',monospace;font-size:10px;color:#5a5a75;letter-spacing:1px;}
+.lib-badge{font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;border-radius:6px;letter-spacing:1px;flex-shrink:0;}
+.lib-badge.lesson{background:#152a3a;color:#4fc3f7;}
+.lib-badge.flashcards{background:#152a1e;color:#34d399;}
+.lib-del{background:none;border:none;color:#3a3a55;cursor:pointer;font-size:14px;padding:3px 5px;flex-shrink:0;}
+.lib-del:hover{color:#f87191;}
+#library-empty{font-family:'Space Mono',monospace;font-size:11px;color:#4a4a63;padding:6px 2px;}
+
+@media (max-width:560px){
+  #view-study{max-width:100%;}
+  #chapter-panel,#composer,#output-panel{padding:15px;}
+}
 </style>
 </head>
 <body>
@@ -253,6 +394,14 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
   <h1 style="color:#fff;font-size:22px;font-weight:700;letter-spacing:2px;margin-bottom:4px;">日本語フラッシュカード</h1>
   <div class="mono" id="card-total" style="color:#888;font-size:11px;letter-spacing:3px;">GRAMMAR FLASHCARDS</div>
 </div>
+
+<!-- View switcher -->
+<div id="view-nav">
+  <button class="pill" data-view="cards" onclick="setView('cards')">CARDS</button>
+  <button class="pill" data-view="study" onclick="setView('study')">STUDY</button>
+</div>
+
+<div id="view-cards">
 
 <!-- Deck picker -->
 <div id="deck-picker"></div>
@@ -315,6 +464,45 @@ body{min-height:100vh;background:#080810;display:flex;flex-direction:column;alig
 
 <!-- No cards -->
 <div id="no-cards">No cards match this filter.</div>
+
+</div><!-- /view-cards -->
+
+<div id="view-study" style="display:none;">
+
+  <!-- Chapter tabs -->
+  <div id="chapter-tabs"></div>
+
+  <!-- Grammar bullets for the active chapter -->
+  <div id="chapter-panel"></div>
+
+  <!-- Composer -->
+  <div id="composer">
+    <div id="selection-tray">Nothing selected yet. Tick grammar points above.</div>
+    <textarea id="composer-prompt" rows="2"
+      placeholder="What do you want? e.g. drill me on the difference between causative and causative-passive"></textarea>
+    <div id="composer-row">
+      <select id="composer-kind" class="mono"></select>
+      <button class="btn" id="generate-btn" onclick="generate()">Generate</button>
+      <button class="btn" id="clear-btn" onclick="clearSelection()">Clear</button>
+    </div>
+    <div id="composer-status"></div>
+  </div>
+
+  <!-- Output -->
+  <div id="output-panel">
+    <button class="close-btn" onclick="closeOutput()">✕</button>
+    <div id="output-title" class="mono"></div>
+    <div id="output-note"></div>
+    <div id="output-content" class="content"></div>
+  </div>
+
+  <!-- Library -->
+  <div id="library">
+    <div id="library-heading" class="mono">LIBRARY</div>
+    <div id="library-list"></div>
+  </div>
+
+</div><!-- /view-study -->
 
 <!-- Footer -->
 <div id="footer">HÄH?何? · 日本語フラッシュカード</div>
@@ -420,10 +608,22 @@ function getAccent(card) {
     return deckColorMap[card.deck] || '#fff';
 }
 
+// Decks written by the study view are prefixed with ★.
+function isGeneratedDeck(deckName) {
+    return deckName.startsWith('★');
+}
+
 function getDeckFormName(deckName) {
     // Extract form name: "GENKI II L22 - Passive Verbs" -> "Passive"
     const m = deckName.match(/- (.+?) (Verbs|Rules)$/);
-    return m ? m[1] : deckName;
+    if (m) return m[1];
+    // A generated deck is named after the request that produced it, which is
+    // far too long for the badge.
+    if (isGeneratedDeck(deckName)) {
+        const label = deckName.slice(1).trim();
+        return label.length > 26 ? label.slice(0, 24) + '…' : label;
+    }
+    return deckName;
 }
 
 function getDeckShortName(deckName) {
@@ -597,7 +797,11 @@ function render() {
         // Verb card
         frontHtml += '<div class="verb-jp">' + escHtml(card.front) + '</div>';
         frontHtml += '<div class="verb-romaji">' + escHtml(card.front_romaji) + '</div>';
-        frontHtml += '<div class="form-prompt" style="color:' + accent + ';">→ ' + formName.toUpperCase() + ' FORM?</div>';
+        // Hand-built decks hold a bare verb, so they need the "→ X FORM?"
+        // prompt. A generated card already asks its own question.
+        if (!isGeneratedDeck(card.deck)) {
+            frontHtml += '<div class="form-prompt" style="color:' + accent + ';">→ ' + formName.toUpperCase() + ' FORM?</div>';
+        }
     } else {
         frontHtml += '<div class="rule-front">' + escHtml(card.front) + '</div>';
         frontHtml += '<div class="rule-frontsub">' + escHtml(card.front_sub) + '</div>';
@@ -708,8 +912,334 @@ function renderMarkdown(str) {
     return '<p>' + h + '</p>';
 }
 
+// ═══════════════════════════════════════════════════════
+// STUDY VIEW
+// ═══════════════════════════════════════════════════════
+
+const CHAPTERS = <?= json_encode(array_map(function ($c) {
+    // The grammar bodies are large and only the server needs them, so the
+    // browser gets everything except those.
+    $c['grammar'] = array_map(function ($g) {
+        unset($g['body']);
+        return $g;
+    }, $c['grammar']);
+    return $c;
+}, $chapters)) ?>;
+const KINDS = <?= json_encode(GENERATION_KINDS) ?>;
+
+const study = {
+    view: 'cards',
+    activeChapter: CHAPTERS.length ? CHAPTERS[0].slug : null,
+    selected: new Set(),
+    busy: false,
+};
+
+// Points keyed by id, so the tray can name things selected in other chapters.
+const POINT_INDEX = {};
+CHAPTERS.forEach(c => c.grammar.forEach(g => {
+    POINT_INDEX[g.id] = { name: g.name, lesson: c.lesson, book: c.book };
+}));
+
+function setView(view) {
+    study.view = view;
+    document.getElementById('view-cards').style.display = view === 'cards' ? '' : 'none';
+    document.getElementById('view-study').style.display = view === 'study' ? 'flex' : 'none';
+    document.querySelectorAll('#view-nav .pill').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === view);
+    });
+    document.getElementById('card-total').textContent =
+        view === 'cards' ? 'GRAMMAR FLASHCARDS' : 'ON-DEMAND LESSONS';
+    if (view === 'study') renderStudy();
+}
+
+function setChapter(slug) {
+    study.activeChapter = slug;
+    renderStudy();
+}
+
+function togglePoint(id) {
+    study.selected.has(id) ? study.selected.delete(id) : study.selected.add(id);
+    renderStudy();
+}
+
+function clearSelection() {
+    study.selected.clear();
+    renderStudy();
+}
+
+function renderStudy() {
+    renderChapterTabs();
+    renderChapterPanel();
+    renderTray();
+}
+
+function renderChapterTabs() {
+    const el = document.getElementById('chapter-tabs');
+    el.innerHTML = CHAPTERS.map(c => {
+        const n = c.grammar.filter(g => study.selected.has(g.id)).length;
+        const active = c.slug === study.activeChapter ? ' active' : '';
+        const tick = n ? `<span class="tick">${n}</span>` : '';
+        return `<button class="pill${active}" onclick="setChapter('${c.slug}')">`
+             + `L${c.lesson}${tick}</button>`;
+    }).join('');
+}
+
+function renderChapterPanel() {
+    const c = CHAPTERS.find(x => x.slug === study.activeChapter);
+    const el = document.getElementById('chapter-panel');
+    if (!c) {
+        el.innerHTML = '<div class="mono" style="color:#666;font-size:12px;">'
+                     + 'No chapters found in chapters/.</div>';
+        return;
+    }
+
+    const points = c.grammar.map(g => {
+        const on = study.selected.has(g.id) ? ' on' : '';
+        return `<div class="point${on}" onclick="togglePoint('${g.id}')">`
+             + `<div class="box">${study.selected.has(g.id) ? '✓' : ''}</div>`
+             + `<div class="txt"><div class="name">${escHtml(g.name)}</div>`
+             + `<div class="sum">${escHtml(g.summary)}</div></div></div>`;
+    }).join('');
+
+    el.innerHTML =
+        `<div class="chapter-head"><span class="jp">${escHtml(c.title_jp)}</span>`
+      + `<span class="en">Genki ${c.book === 1 ? 'I' : 'II'} · Lesson ${c.lesson} · ${escHtml(c.title)}</span></div>`
+      + `<div class="chapter-meta">${c.grammar.length} GRAMMAR POINTS · ${c.vocab_count} WORDS · ${c.kanji_count} KANJI</div>`
+      + points;
+}
+
+function renderTray() {
+    const el = document.getElementById('selection-tray');
+    const ids = [...study.selected];
+    if (!ids.length) {
+        el.innerHTML = 'Nothing selected yet. Tick grammar points above.';
+        return;
+    }
+    const names = ids.map(id => {
+        const p = POINT_INDEX[id];
+        return p ? `<span class="sel">${escHtml(p.name)}</span> <span>(L${p.lesson})</span>` : '';
+    }).filter(Boolean);
+    el.innerHTML = `Selected ${ids.length}: ` + names.join(', ');
+}
+
+async function generate() {
+    if (study.busy) return;
+    const status = document.getElementById('composer-status');
+    const btn = document.getElementById('generate-btn');
+
+    if (!study.selected.size) {
+        status.className = 'err';
+        status.textContent = 'Tick at least one grammar point first.';
+        return;
+    }
+    if (!HAS_API_KEY) {
+        status.className = 'err';
+        status.textContent = 'No API key. Add OPENROUTER_API_KEY to .env';
+        return;
+    }
+
+    const kind = document.getElementById('composer-kind').value;
+    study.busy = true;
+    btn.disabled = true;
+    status.className = '';
+    status.textContent = 'Generating from your chapter notes, this takes a while...';
+
+    try {
+        const res = await fetch('?action=generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kind,
+                grammar_ids: [...study.selected],
+                prompt: document.getElementById('composer-prompt').value,
+            }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            status.className = 'err';
+            status.textContent = data.error;
+        } else {
+            status.className = '';
+            status.textContent = '';
+            showOutput(data);
+            loadLibrary();
+            // A generated deck is a real CSV, so the picker needs reloading.
+            if (data.deck_file) await reloadDecks();
+        }
+    } catch (e) {
+        status.className = 'err';
+        status.textContent = 'Request failed: ' + e.message;
+    } finally {
+        study.busy = false;
+        btn.disabled = false;
+    }
+}
+
+function showOutput(data) {
+    const panel = document.getElementById('output-panel');
+    document.getElementById('output-title').textContent =
+        (KINDS[data.kind] || data.kind).toUpperCase() + ' · ' + (data.model || '');
+    document.getElementById('output-note').textContent = data.note || '';
+
+    document.getElementById('output-content').innerHTML = data.kind === 'flashcards'
+        ? '<p>Deck saved. Switch to <strong>CARDS</strong> and pick it in the deck list.</p>'
+          + '<pre style="overflow-x:auto;font-size:11px;color:#7a7a95;white-space:pre-wrap;">'
+          + escHtml(data.content.slice(0, 1200)) + '</pre>'
+        : renderLessonMarkdown(data.content);
+
+    panel.classList.add('visible');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeOutput() {
+    document.getElementById('output-panel').classList.remove('visible');
+}
+
+async function reloadDecks() {
+    const res = await fetch('?action=cards');
+    const decks = await res.json();
+    Object.keys(decks).forEach(name => {
+        if (!ALL_DECKS[name]) {
+            ALL_DECKS[name] = decks[name];
+            deckNames.push(name);
+            deckColorMap[name] = DECK_COLORS[(deckNames.length - 1) % DECK_COLORS.length];
+            state.selectedDecks.add(name);
+        }
+    });
+    deckNames.sort();
+    resetSession();
+}
+
+async function loadLibrary() {
+    const res = await fetch('?action=generations');
+    const rows = await res.json();
+    const el = document.getElementById('library-list');
+
+    if (!rows.length) {
+        el.innerHTML = '<div id="library-empty">Nothing generated yet.</div>';
+        return;
+    }
+
+    el.innerHTML = rows.map(r => {
+        const when = (r.created_at || '').slice(0, 16);
+        const points = (r.grammar_ids || [])
+            .map(id => POINT_INDEX[id])
+            .filter(Boolean).map(p => p.name).join(', ');
+        return `<div class="lib-item">`
+             + `<span class="lib-badge ${r.kind}">${(KINDS[r.kind] || r.kind).toUpperCase()}</span>`
+             + `<div class="main" onclick="openGeneration(${r.id})">`
+             + `<div class="t">${escHtml(r.title)}</div>`
+             + `<div class="m">${when} · ${escHtml(points)}</div></div>`
+             + `<button class="lib-del" onclick="removeGeneration(${r.id})" title="Delete">✕</button>`
+             + `</div>`;
+    }).join('');
+}
+
+async function openGeneration(id) {
+    const res = await fetch('?action=generation&id=' + id);
+    const data = await res.json();
+    if (data.error) return;
+    showOutput(data);
+}
+
+async function removeGeneration(id) {
+    if (!confirm('Delete this? A generated deck is deleted with it.')) return;
+    await fetch('?action=delete_generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+    });
+    loadLibrary();
+}
+
+// Markdown renderer for generated lessons. Handles the pipe tables the prompt
+// asks for, which the flashcard explain panel's renderer does not.
+function renderLessonMarkdown(src) {
+    if (!src) return '';
+    const lines = escHtml(src).split('\n');
+    const out = [];
+    let i = 0;
+
+    const inline = s => s
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^*])\*([^*]+?)\*/g, '$1<em>$2</em>')
+        .replace(/`(.+?)`/g, '<code>$1</code>');
+
+    const cells = line => line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        if (line.trim() === '') { i++; continue; }
+
+        // Table: a pipe row followed by a |---| separator.
+        if (line.trim().startsWith('|') && i + 1 < lines.length
+            && /^\s*\|[\s\-:|]+\|\s*$/.test(lines[i + 1])) {
+            const head = cells(line);
+            i += 2;
+            const body = [];
+            while (i < lines.length && lines[i].trim().startsWith('|')) {
+                body.push(cells(lines[i]));
+                i++;
+            }
+            out.push('<div class="table-scroll"><table><thead><tr>'
+                + head.map(c => `<th>${inline(c)}</th>`).join('')
+                + '</tr></thead><tbody>'
+                + body.map(r => '<tr>' + r.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>').join('')
+                + '</tbody></table></div>');
+            continue;
+        }
+
+        const heading = line.match(/^(#{1,4})\s+(.*)$/);
+        if (heading) {
+            const level = Math.min(heading[1].length, 3);
+            out.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+            i++;
+            continue;
+        }
+
+        if (/^\s*(---+|___+|\*\*\*+)\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+
+        // Lists, gathering consecutive items of the same kind.
+        const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
+        const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+        if (bullet || numbered) {
+            const tag = bullet ? 'ul' : 'ol';
+            const pattern = bullet ? /^\s*[-*+]\s+(.*)$/ : /^\s*\d+[.)]\s+(.*)$/;
+            const items = [];
+            while (i < lines.length) {
+                const m = lines[i].match(pattern);
+                if (!m) break;
+                items.push(`<li>${inline(m[1])}</li>`);
+                i++;
+            }
+            out.push(`<${tag}>${items.join('')}</${tag}>`);
+            continue;
+        }
+
+        // Paragraph, running until a blank line or a block-level marker.
+        const para = [];
+        while (i < lines.length && lines[i].trim() !== ''
+               && !/^\s*(#{1,4}\s|[-*+]\s|\d+[.)]\s|\|)/.test(lines[i])
+               && !/^\s*(---+|___+|\*\*\*+)\s*$/.test(lines[i])) {
+            para.push(lines[i].trim());
+            i++;
+        }
+        if (para.length) out.push(`<p>${inline(para.join(' '))}</p>`);
+        else i++;
+    }
+
+    return out.join('');
+}
+
 // ─── Init ───
 resetSession();
+
+document.getElementById('composer-kind').innerHTML = Object.entries(KINDS)
+    .map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
+setView('cards');
+loadLibrary();
 </script>
 </body>
 </html>

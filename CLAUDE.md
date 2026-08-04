@@ -4,12 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Two parts that will eventually meet:
+A single-page PHP app with two views:
 
-1. **Chapter notes** (`chapters/`) are structured markdown, one file per Genki lesson. They are source data for generating study material, not prose to read. Genki 2nd edition.
-2. **Flashcard app** (`index.php`) is a single-page PHP app with CSV decks, SQLite for mastered card persistence, and optional OpenRouter LLM integration for sentence explanations.
+1. **CARDS** is the original flashcard trainer. CSV decks in `cards/`, 3D flip, SQLite for mastered cards, an explain button per card.
+2. **STUDY** browses `chapters/` as tabs of terse grammar bullets, lets you tick points across chapters, and generates study material on demand from a free-text request.
 
-The decks in `cards/` are still hand-built and predate the chapter notes.
+The link between them is `chapters/`, structured markdown notes (one file per Genki lesson, 2nd edition) that are source data rather than prose to read. A generation sends the selected grammar points' full note sections to the model, so output is grounded in the notes rather than the model's recollection of Genki.
+
+Generated lessons are stored in SQLite. Generated decks are written as real CSVs into `cards/` (prefixed `★`) and studied in the CARDS view like any other deck.
 
 ## Chapter notes
 
@@ -42,24 +44,41 @@ Open `http://localhost:8000`. Requires PHP 8.0+ with SQLite and cURL.
 
 ## Architecture
 
-Single `index.php` (~670 lines) serves both API endpoints and the HTML/CSS/JS frontend:
+`index.php` holds the routes and the whole frontend. The backend lives in `lib/`, split out when the study view would have pushed the single file past 1400 lines:
 
-- **PHP backend** (top of file): `.env` loading, SQLite init, `loadDecks()` from CSV, three API routes (`?action=cards|master|explain`)
-- **HTML/CSS** (middle): Dark theme (#080810), 3D flip animation, Google Fonts (Noto Serif JP, Space Mono)
-- **JavaScript** (bottom): Vanilla JS with a single `state` object and `render()` function that updates all DOM elements
+```
+lib/chapters.php    parse chapters/**/l<NN>.md into structures (frontmatter, per-point bodies)
+lib/store.php       SQLite schema and all queries
+lib/openrouter.php  shared API client for explain and generate
+lib/templates.php   one prompt builder per output kind, plus deck CSV writing
+```
 
-### Data Flow
+API routes, all on `?action=`: `cards`, `master`, `explain`, `chapters`, `generate`, `generations`, `generation`, `delete_generation`.
+
+### Data flow
 
 - Cards stored in `cards/*.csv` (filename = deck name)
 - CSV format: `front,front_sub,front_romaji,back,back_romaji,example_jp,example_romaji,example_en`
 - Cards with non-empty `front_sub` render as rule cards; others render as verb cards
-- Mastered cards tracked in `db/flashcards.db` SQLite via MD5 hash of `front+back`
-- OpenRouter API key from `.env` file; explain button hidden when no key configured
+- Mastered cards tracked in `db/flashcards.db` via MD5 hash of `front+back`
+- Generated lessons and decks stored in the `generations` table with the inputs that produced them
+- Deleting a generation also deletes its CSV, so the picker cannot offer a deck the library has dropped
 
-### Key State
+### Adding an output kind
+
+Add an entry to `GENERATION_KINDS` and a prompt builder in `lib/templates.php`. Nothing else needs to know about it; the dropdown is built from that constant.
+
+### Things that will bite you
+
+- **Generation needs more than 30s.** `max_execution_time` defaults to 30 and PHP kills the request mid-flight. `openrouterChat()` calls `set_time_limit()` for this reason. A three-point deck takes ~85s.
+- **Card generation asks for JSON, not CSV.** Models reliably forget to quote a field containing a comma, which silently corrupts a row. The app writes the CSV itself from parsed JSON.
+- **Generated decks are prefixed `★`** and are git-ignored user data. `isGeneratedDeck()` also suppresses the "→ X FORM?" prompt, since a generated card already asks its own question.
+
+### Key state
 
 ```javascript
 state = { selectedDecks, showMastered, deck, index, flipped, score, done, masteredHashes }
+study = { view, activeChapter, selected, busy }   // selected persists across chapter tabs
 ```
 
 Deck colors cycle through: #e94560, #4fc3f7, #f5a623, #a78bfa, #34d399

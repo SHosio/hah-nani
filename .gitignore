@@ -11,3 +11,9 @@ __pycache__/
 data/genki-vocab.json
 data/genki-kanji.json
 chapters/**/*.vocab.md
+
+# Decks written by the study view. Generated per-user study data, same status
+# as db/, and they can be regenerated at any time.
+cards/★*.csv
+
+.playwright-mcp/
