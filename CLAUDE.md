@@ -30,7 +30,16 @@ Rules that are easy to get wrong:
 - The Vocabulary and Kanji tables are **generated**. Corrections go in `data/vocab-overrides.json`, `data/kanji-overrides.json` or `data/pos-groups.json`, then re-sync. Hand-edits are overwritten.
 - Glob chapters with `l[0-9][0-9].md`, since `l*.md` also matches the generated companions.
 - Grammar IDs (`g2-l21-passive`) are permanent once committed. Downstream artifacts reference them. Renaming a point's `name` is fine, renaming its `id` is not.
-- The source PDFs in Google Drive are image scans with no text layer, so nothing can be grepped or extracted from them without OCR.
+- **The textbook is the ground truth, and you can read it.** The PDFs in Google Drive are image scans with no text layer, so nothing can be grepped from them. But rendering a page and reading the PNG works well, and needs no OCR:
+
+  ```bash
+  G2="/Users/simohosio/Library/CloudStorage/GoogleDrive-simo.hosio@gmail.com/My Drive/Japanese/g2.pdf"
+  pdftoppm -f 258 -l 258 -r 90 -png "$G2" /tmp/page   # then Read /tmp/page-258.png
+  ```
+
+  PDF page numbers equal book page numbers. Lesson start pages are on the contents pages (PDF 6-9). A lesson's grammar section sits at roughly start+4 to start+12, with dialogue and vocabulary before it and 練習 practice after.
+
+  Writing chapters from recall instead produced roughly one structural error per chapter (an invented grammar point in L22, a missing one in L23). Always check the book.
 
 See `data/README.md` for dataset provenance and `docs/superpowers/specs/2026-08-04-genki-chapter-notes-design.md` for why the design is shaped this way.
 

@@ -41,17 +41,53 @@ of speech field.
 The vendored files are never edited. Fixes live alongside them so that
 re-downloading the upstream data does not silently discard our corrections:
 
-- `vocab-overrides.json`, keyed `<lesson>:<kana>`. Fields: `kanji`, `kana`,
-  `romaji`, `english`, `pos`.
+- `vocab-overrides.json`, keyed `<lesson>:<kana>`. Corrects a word that already
+  exists. Fields: `kanji`, `kana`, `romaji`, `english`, `pos`.
 - `kanji-overrides.json`, keyed `<lesson>:<kanji>`. Fields: `readings`,
   `meaning`, `examples`.
+- `vocab-additions.json`, keyed by lesson. Adds a word the dataset is missing.
+  Each entry needs `kanji`, `kana`, `english` and `pos`. An addition is spliced
+  in after the last dataset word sharing its part of speech, so Genki's own
+  grouping order survives.
 
-Corrections applied so far include a misspelled gloss for 泥棒, a wrong reading
-for 末, missing example words for 重, and romaji spacing for phrase entries such
-as 気が付く, where the generator would otherwise run the particles together.
+The dataset turned out to be incomplete. Checking each chapter against the
+book's own word list found eleven missing words across five lessons, including
+生まれる and お祈りする in Lesson 17, 片付ける in Lesson 18, それで in Lesson 19,
+and 迎えに行く in Lesson 16. That is what `vocab-additions.json` exists for.
 
 After editing any of these, run `python3 tools/sync_tables.py` to push the
 change into every chapter file, then `python3 tools/validate_chapters.py`.
+
+## Romaji convention
+
+Generated romaji is wapuro style, kana-faithful, with `wo` for を and doubled
+long vowels. Two cases need a hand-written `romaji` override, and two do not.
+Keeping this consistent matters because the whole corpus feeds flashcards and,
+later, speech.
+
+Space it when a particle sits inside the phrase, or when the entry is a
+multi-word set expression:
+
+| entry | romaji |
+|---|---|
+| 気が付く | `ki ga tsuku` |
+| 保険に入る | `hoken ni hairu` |
+| そんなことはない | `sonna koto wa nai` |
+| 目覚まし時計 | `mezamashi dokei` |
+
+Leave it joined for する compounds and for lexicalised adverbs, which is what
+the generator already produces:
+
+| entry | romaji |
+|---|---|
+| 準備する | `junbisuru` |
+| 交換する | `koukansuru` |
+| 絶対に | `zettaini` |
+| 本当に | `hontouni` |
+
+One known generator limitation: は always renders as `ha`, so a particle は
+inside a phrase (それでは, そんなことはない) needs an override to read `wa`.
+Detecting particle は reliably is not worth the complexity.
 
 ## Editions
 
