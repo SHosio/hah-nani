@@ -55,11 +55,16 @@ Content is written against scans of Genki II 2nd edition. The explanations and
 example sentences are our own; the textbook's prose, its example sentences and
 its chapter word lists are deliberately not reproduced here.
 
-**Verification status.** Lessons 13 to 20 were written directly from the book's
-grammar pages. Lesson 21 was additionally put through an adversarial review
-against those pages, which found and fixed 17 defects. Lessons 22 and 23 were
-corrected against the book's table of contents after they were first written.
-Lessons 13 to 20 have not yet had the L21-style adversarial review.
+**Verification status.** All eleven chapters have been through an adversarial
+review against the scanned grammar pages and had the findings applied. Every
+chapter had defects, including chapters written from the book in the first
+place. What the reviews caught most often: formation-table rows that generate
+ungrammatical forms, restrictions stated more absolutely than the book states
+them, wrong lesson cross-references, and textbook sentences reproduced verbatim.
+
+What this does not cover: the example sentences are our own, so the book cannot
+confirm they sound natural. That would need a native speaker or a separate
+check.
 
 ## Generating study material
 

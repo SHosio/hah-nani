@@ -17,13 +17,17 @@ Generated lessons are stored in SQLite. Generated decks are written as real CSVs
 
 **Current coverage:** Genki II lessons 13-23, 11 chapters, 57 grammar points. Genki I (lessons 1-12) is not written yet; `g1.pdf` sits beside `g2.pdf` in the same Drive folder and the same method applies.
 
-**Verification status**, which matters before you trust or extend a chapter:
+**Verification status:** all eleven chapters have been reviewed against the book and corrected.
 
-| chapters | how written | adversarially reviewed against the book |
-|---|---|---|
-| L13-L20 | from the book's grammar pages | no |
-| L21 | from recall, then fully corrected | yes, 17 defects found and fixed |
-| L22, L23 | from recall, then corrected against the book's contents pages | partially |
+Every chapter was reviewed against the scanned grammar pages by an agent
+briefed to find errors rather than to approve. All eleven had defects. The
+recurring kinds were invented formation rows that generate ungrammatical forms,
+restrictions stated more absolutely than the book states them, wrong lesson
+cross-references, and textbook example sentences reproduced verbatim.
+
+Two things that pass validation but are still unchecked: the example sentences
+are our own, so nothing confirms they sound natural to a native speaker, and
+cross-references to Genki I point at chapters that do not exist yet.
 
 `chapters/SCHEMA.md` is the contract every chapter file follows. Read it before editing anything under `chapters/`.
 
