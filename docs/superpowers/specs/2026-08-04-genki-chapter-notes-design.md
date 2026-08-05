@@ -115,3 +115,40 @@ useful.
 
 Not in this spec: changes to `index.php`. The tabbed per-chapter interface is a
 consumer of this data and gets designed once there is data worth displaying.
+
+## Addendum, 2026-08-05
+
+The pilot held up and Genki II is complete, lessons 13 to 23, 57 grammar points.
+Three things about the design turned out differently than written above.
+
+**The "why not extract from the PDFs" section was half wrong.** OCR was the
+wrong tool, but the conclusion drawn from that, that the book was unusable as a
+source, was not. Rendering a page at 90 DPI and reading the image works, needs
+no OCR, and makes the textbook the ground truth after all. The scans are not a
+"reference of last resort" as claimed above; they are the primary source.
+
+This mattered more than a documentation nit. Every chapter written without the
+book carried roughly one structural error. L22 had an invented grammar point,
+L23 was missing one, and L21 had two invented formation rows plus 15 further
+defects that an adversarial review later found. Every chapter written from the
+scan had none that verification found.
+
+**The vendored dataset is incomplete.** Eleven words present in the book's own
+chapter lists are missing from `cemulate/genki-db`. The override design assumed
+corrections only, so `data/vocab-additions.json` was added, along with splicing
+logic that keeps Genki's part-of-speech grouping intact.
+
+**The public-repo constraint arrived late and reshaped the file layout.** Chapter
+word lists are the publisher's editorial selection, so vocabulary and kanji moved
+into git-ignored `l<NN>.vocab.md` companions, leaving the chapter file with a
+pointer and the counts. The validator rejects a table pasted back in, so the
+constraint is enforced rather than remembered.
+
+**Scaling worked through subagents, one per chapter.** Eight chapters do not fit
+one context window; eight subagents each with their own do. The constraints that
+made it work are recorded in `CLAUDE.md`. The load-bearing one is handing each
+agent the grammar point list from the book's contents pages, which is what stops
+the invented-point failure mode.
+
+Outstanding: lessons 13 to 20 have not had the adversarial review that L21 had,
+and Genki I is not started.

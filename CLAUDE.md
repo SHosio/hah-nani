@@ -15,6 +15,16 @@ Generated lessons are stored in SQLite. Generated decks are written as real CSVs
 
 ## Chapter notes
 
+**Current coverage:** Genki II lessons 13-23, 11 chapters, 57 grammar points. Genki I (lessons 1-12) is not written yet; `g1.pdf` sits beside `g2.pdf` in the same Drive folder and the same method applies.
+
+**Verification status**, which matters before you trust or extend a chapter:
+
+| chapters | how written | adversarially reviewed against the book |
+|---|---|---|
+| L13-L20 | from the book's grammar pages | no |
+| L21 | from recall, then fully corrected | yes, 17 defects found and fixed |
+| L22, L23 | from recall, then corrected against the book's contents pages | partially |
+
 `chapters/SCHEMA.md` is the contract every chapter file follows. Read it before editing anything under `chapters/`.
 
 ```bash
@@ -39,7 +49,22 @@ Rules that are easy to get wrong:
 
   PDF page numbers equal book page numbers. Lesson start pages are on the contents pages (PDF 6-9). A lesson's grammar section sits at roughly start+4 to start+12, with dialogue and vocabulary before it and 練習 practice after.
 
-  Writing chapters from recall instead produced roughly one structural error per chapter (an invented grammar point in L22, a missing one in L23). Always check the book.
+  Writing chapters from recall instead produced roughly one structural error per chapter (an invented grammar point in L22, a missing one in L23, two invented formation rows in L21). Always check the book.
+- **The vendored word list is incomplete.** Eleven words that appear in the book's own chapter lists are absent from `genki-db`. Use `data/vocab-additions.json` to add one; overrides can only correct a word that already exists.
+
+## Writing or verifying a chapter
+
+Both jobs fit one subagent per chapter, run in parallel. A chapter's worth of book pages plus the schema plus a worked example is a lot of context, and eight of them will not fit in one window. Subagents each get their own, so a full pass over the book is one session, not eight.
+
+What made this work:
+
+- Give the agent its lesson's page images (`pdftoppm` at 90 DPI is legible) and tell it to read them. No OCR step.
+- Give it the grammar point list **from the book's own contents pages**, and say to use exactly those, in that order. This is what stops the invented-point failure.
+- Give it `chapters/g2/l22.md` as a worked example and `SCHEMA.md` as the contract.
+- Scope it to writing one file. Have it **report** vocabulary metadata (part-of-speech boundaries, romaji overrides) rather than writing to `data/*.json`, since parallel agents would clobber each other there. Merge centrally, and verify the reported part-of-speech counts sum to the dataset total before trusting them.
+- For verification, tell the agent to find errors rather than to review, and give it the same pages. A polite reviewer returns nothing useful.
+
+Spot-check surprising findings against the scan yourself before applying them.
 
 See `data/README.md` for dataset provenance and `docs/superpowers/specs/2026-08-04-genki-chapter-notes-design.md` for why the design is shaped this way.
 
